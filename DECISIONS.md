@@ -5,6 +5,35 @@ choice: the decision, the alternatives considered, and why this one won.
 
 ---
 
+## 2026-05-31 — Lead source is Hunter (domain-centric), Apollo kept as paid upgrade path
+
+**Decision.** The live lead source is Hunter.io `/v2/domain-search`. `run_lead_agent`
+now takes a `domains` list and fetches once per domain; the LLM score does the role
+filtering. `fetch_from_apollo` stays in the codebase, unused by default, as the
+upgrade path for a future paid Apollo plan.
+
+**Why.** Apollo's `mixed_people/search` returns 403 `API_INACCESSIBLE` on the free
+plan regardless of email-credit balance — programmatic people-search is a paid-tier
+feature, confirmed by two live attempts (both spent zero credits, rejected at search).
+Clay was evaluated and rejected: no free callable REST API (HTTP integration is
+Growth-plan $495/mo+) and it is an orchestrator, not a source, so it duplicates our
+pipeline. Hunter is the only genuinely free option that returns real names + emails.
+
+**Tradeoff.** Hunter is domain-centric, not persona-centric: it returns everyone it
+knows at a company, unfiltered by role. So the workflow changed from "describe a
+persona" to "name the companies + describe who to prioritize," and the LLM ranks
+within each company. This matches targeted B2B outreach and keeps the proven
+parse→dedup→enrich→score→store pipeline — only the source edge changed.
+
+**Validation.** Live run over zapier.com: 1 Hunter search, 10 people, scored 80
+(people/talent roles) down to 20 (unrelated roles), 10 rows written to agency.leads.
+The normalized candidate shape made the Apollo→Hunter swap a source-only change.
+
+**Implication.** Each domain spends 1 of ~25 monthly Hunter searches. Use
+`score_threshold` to drop low-fit people before they reach the review queue.
+
+---
+
 ## 2026-05-31 — Lead agent: mock/live by env flag, one LLM call per lead, writes only in run.py
 
 **Decision.** `LEAD_SOURCE_MODE` (default `mock`) chooses fixtures vs real Apollo at

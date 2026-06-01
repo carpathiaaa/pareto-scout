@@ -27,6 +27,7 @@ _FIXTURES = Path(__file__).parent / "fixtures"
 # One limiter per provider: Apollo and Hunter have unrelated quotas and must not
 # throttle each other. 1s default per CLAUDE.md.
 _apollo_limiter = RateLimiter(min_interval_seconds=1.0, name="apollo")
+_hunter_limiter = RateLimiter(min_interval_seconds=1.0, name="hunter")
 
 # Normalized candidate keys every source must emit.
 CANDIDATE_KEYS = ("name", "company", "email", "title", "source")
@@ -119,6 +120,82 @@ def _fetch_from_apollo_live(
 
     people = response.json().get("people", [])
     return [_normalize_apollo_person(p) for p in people]
+
+
+def _normalize_hunter_email(
+    entry: dict[str, Any], organization: str | None
+) -> dict[str, Any]:
+    """Map one Hunter email object to the normalized candidate shape.
+
+    Hunter splits the name into first/last and labels the job as `position`, so we
+    join and rename here to match the shared shape the enricher expects. The company
+    comes from the domain-search response, not the per-email entry.
+    """
+    first = entry.get("first_name") or ""
+    last = entry.get("last_name") or ""
+    name = " ".join(part for part in (first, last) if part) or None
+    return {
+        "name": name,
+        "company": organization,
+        "email": entry.get("value"),
+        "title": entry.get("position"),
+        "source": "hunter",
+    }
+
+
+def fetch_from_hunter(domain: str, *, limit: int = 25) -> list[dict[str, Any]]:
+    """Fetch lead candidates for one company domain from Hunter (or its fixture).
+
+    Hunter is domain-centric: it returns the people Hunter knows at a given company,
+    unlike Apollo's persona search. run.py calls this once per target domain and the
+    LLM still scores each person against the run's criteria.
+
+    Args:
+        domain: Company domain to search, e.g. "stripe.com".
+        limit: Max emails to request. Bounds the response size; one domain-search
+            counts as a single Hunter credit regardless of limit.
+
+    Returns:
+        Normalized candidate dicts (may include null emails and duplicates).
+    """
+    if _is_mock():
+        logger.info("Hunter: mock mode, loading fixture (0 searches spent)")
+        data = _load_fixture("hunter_sample.json").get("data", {})
+        org = data.get("organization")
+        return [_normalize_hunter_email(e, org) for e in data.get("emails", [])]
+
+    return _fetch_from_hunter_live(domain, limit=limit)
+
+
+def _fetch_from_hunter_live(domain: str, *, limit: int) -> list[dict[str, Any]]:
+    """Real Hunter domain-search. Spends one search credit — gated by LEAD_SOURCE_MODE=live.
+
+    Isolated from the mock path so the credit-spending code is never reached by
+    accident during dev or tests.
+    """
+    api_key = get_env("HUNTER_API_KEY")
+    # WARNING: Hunter free tier is ~25 searches/month. Each domain-search is one
+    # credit regardless of how many emails come back. Runs only under LEAD_SOURCE_MODE=live.
+    logger.warning(
+        "Hunter: LIVE mode — domain-search for %s spends 1 search (free tier ~25/month)",
+        domain,
+    )
+    _hunter_limiter.wait()
+
+    try:
+        response = httpx.get(
+            "https://api.hunter.io/v2/domain-search",
+            params={"domain": domain, "limit": limit, "api_key": api_key},
+            timeout=30.0,
+        )
+        response.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        logger.error(f"API call failed: {e.response.status_code} - {e.response.text}")
+        raise
+
+    data = response.json().get("data", {})
+    org = data.get("organization")
+    return [_normalize_hunter_email(e, org) for e in data.get("emails", [])]
 
 
 def _as_list(value: Any) -> list[str]:

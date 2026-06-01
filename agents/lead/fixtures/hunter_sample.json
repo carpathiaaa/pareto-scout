@@ -1,0 +1,33 @@
+{
+  "_comment": "Mock Hunter /v2/domain-search response, trimmed to the fields sources.py reads. Used in LEAD_SOURCE_MODE=mock so dev spends zero Hunter searches. Shape mirrors Hunter's data.emails[] objects. Includes a null-value email and a duplicate to exercise dedup.",
+  "data": {
+    "domain": "northwind-labs.com",
+    "organization": "Northwind Labs",
+    "emails": [
+      {
+        "value": "maya.lindqvist@northwind-labs.com",
+        "first_name": "Maya",
+        "last_name": "Lindqvist",
+        "position": "VP of Learning and Development"
+      },
+      {
+        "value": "darnell@northwind-labs.com",
+        "first_name": "Darnell",
+        "last_name": "Okafor",
+        "position": "Head of People Development"
+      },
+      {
+        "value": null,
+        "first_name": "Tomas",
+        "last_name": "Berg",
+        "position": "Engineering Manager"
+      },
+      {
+        "value": "maya.lindqvist@northwind-labs.com",
+        "first_name": "Maya",
+        "last_name": "Lindqvist",
+        "position": "VP of Learning and Development"
+      }
+    ]
+  }
+}

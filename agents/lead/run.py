@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from agents.lead.enricher import enrich_lead
-from agents.lead.sources import fetch_from_apollo
+from agents.lead.sources import fetch_from_hunter
 from shared import db
 from shared.llm import parse_query_to_fields
 from shared.utils import dedup_by, get_logger
@@ -19,13 +19,27 @@ from shared.utils import dedup_by, get_logger
 logger = get_logger(__name__)
 
 
-def run_lead_agent(raw_query: str, *, score_threshold: int = 0) -> dict[str, Any]:
-    """Run the lead pipeline end to end for one natural-language query.
+def run_lead_agent(
+    raw_query: str,
+    *,
+    domains: list[str],
+    score_threshold: int = 0,
+    limit: int = 25,
+) -> dict[str, Any]:
+    """Run the lead pipeline end to end for a query against a set of company domains.
+
+    Hunter is domain-centric, so the agent takes target company domains and the query
+    supplies the scoring rubric: for each domain we fetch the people Hunter knows,
+    then the LLM scores each against the parsed criteria. This keeps the proven
+    parse -> dedup -> enrich -> score -> store pipeline; only the source edge changed.
 
     Args:
-        raw_query: The developer's plain-language request.
+        raw_query: The developer's plain-language request (the scoring rubric).
+        domains: Company domains to search, e.g. ["stripe.com", "notion.so"]. In live
+            mode each domain spends one Hunter search credit.
         score_threshold: Minimum fit_score to keep. 0 stores everything (the queue
             sorts by score); raise it to discard weak leads before they reach review.
+        limit: Max emails to request per domain. Bounds response size, not credits.
 
     Returns:
         A summary: the search_run id, parsed criteria, and counts at each stage.
@@ -34,14 +48,21 @@ def run_lead_agent(raw_query: str, *, score_threshold: int = 0) -> dict[str, Any
     logger.info("Parsed criteria: %s", criteria)
 
     # Log the run first so every candidate row can reference its search_run_id, and so
-    # even a run that surfaces nothing leaves an audit trail.
+    # even a run that surfaces nothing leaves an audit trail. Record the domains too.
     run_row = db.insert(
         db.SEARCH_RUNS,
-        {"agent_type": "lead", "raw_query": raw_query, "parsed_criteria": criteria},
+        {
+            "agent_type": "lead",
+            "raw_query": raw_query,
+            "parsed_criteria": {**criteria, "_domains": domains},
+        },
     )
     search_run_id = run_row["id"]
 
-    candidates = fetch_from_apollo(criteria)
+    # One Hunter search per domain; flatten the results into a single candidate list.
+    candidates: list[dict[str, Any]] = []
+    for domain in domains:
+        candidates.extend(fetch_from_hunter(domain, limit=limit))
     deduped = dedup_by(candidates, key=lambda c: c.get("email"))
     logger.info("Fetched %d candidates, %d after dedup", len(candidates), len(deduped))
 
