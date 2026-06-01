@@ -5,58 +5,37 @@ choice: the decision, the alternatives considered, and why this one won.
 
 ---
 
-## 2026-05-31 — Lead source is Hunter (domain-centric), Apollo kept as paid upgrade path
+## 2026-05-31 — Expert agent: SerpAPI universal source, scored by url, non-experts filtered by LLM
 
-**Decision.** The live lead source is Hunter.io `/v2/domain-search`. `run_lead_agent`
-now takes a `domains` list and fetches once per domain; the LLM score does the role
-filtering. `fetch_from_apollo` stays in the codebase, unused by default, as the
-upgrade path for a future paid Apollo plan.
+**Decision.** The expert agent clones the lead skeleton with three changes: source is
+SerpAPI (one Google search), table is `agency.experts`, and the upsert conflict key is
+`url` (migration 002 adds `unique(url)`). `score_expert` returns score + draft +
+refined_name in one LLM call. Source/scorer are pure; only run.py writes.
 
-**Why.** Apollo's `mixed_people/search` returns 403 `API_INACCESSIBLE` on the free
-plan regardless of email-credit balance — programmatic people-search is a paid-tier
-feature, confirmed by two live attempts (both spent zero credits, rejected at search).
-Clay was evaluated and rejected: no free callable REST API (HTTP integration is
-Growth-plan $495/mo+) and it is an orchestrator, not a source, so it duplicates our
-pipeline. Hunter is the only genuinely free option that returns real names + emails.
+**Why url as the key.** Experts have no email; an expert is identified by their
+profile/article URL, and the same person under two platforms (a paper and a GitHub)
+is two distinct pieces of evidence worth separate rows. In-run dedup alone was
+rejected: it lets re-runs of the same search accumulate duplicate rows. A unique(url)
+index makes upsert idempotent across runs, consistent with leads.email.
 
-**Tradeoff.** Hunter is domain-centric, not persona-centric: it returns everyone it
-knows at a company, unfiltered by role. So the workflow changed from "describe a
-persona" to "name the companies + describe who to prioritize," and the LLM ranks
-within each company. This matches targeted B2B outreach and keeps the proven
-parse→dedup→enrich→score→store pipeline — only the source edge changed.
+**Why not filter non-experts at the source.** SerpAPI returns listicles and ads, not
+just people. We let the LLM score handle it (a roundup scores near 0 and drops below
+threshold) rather than writing brittle URL/title heuristics. The score already exists;
+reusing it for "is this even a person" costs nothing extra.
 
-**Validation.** Live run over zapier.com: 1 Hunter search, 10 people, scored 80
-(people/talent roles) down to 20 (unrelated roles), 10 rows written to agency.leads.
-The normalized candidate shape made the Apollo→Hunter swap a source-only change.
+**Implication.** Run migration 002 once in Supabase before using the agent. Each live
+run spends 1 of ~100 monthly SerpAPI searches + 1 Groq call per result.
 
-**Implication.** Each domain spends 1 of ~25 monthly Hunter searches. Use
-`score_threshold` to drop low-fit people before they reach the review queue.
-
----
-
-## 2026-05-31 — Lead agent: mock/live by env flag, one LLM call per lead, writes only in run.py
-
-**Decision.** `LEAD_SOURCE_MODE` (default `mock`) chooses fixtures vs real Apollo at
-each source call site. `enrich_lead` returns `fit_score` + `draft_message` from a
-single Groq call. Only `run.py` touches the database; `sources.py` and `enricher.py`
-are pure.
-
-**Alternatives.**
-- Mock via injected mock/real classes (DI) — rejected: more machinery than a POC
-  needs, and identical call sites under one env flag can't drift the way two class
-  implementations can.
-- Two LLM calls (score, then draft) — rejected: doubles the 30 req/min Groq budget
-  and lets score and message disagree. One JSON response keeps them consistent.
-- Let sources/enricher write directly — rejected: pushing all writes into run.py
-  keeps the expensive deps (network, DB) at the edges and the logic offline-testable.
-
-**Why this won.** Mock-first is both credit-safe (CLAUDE.md: spend only to validate)
-and a correctness tool: deterministic fixtures test dedup/threshold/projection so the
-only thing real credits buy is "does the live response match the fixture's shape."
-
-**Implication.** Dev and `pytest` spend zero Apollo credits. `LEAD_SOURCE_MODE=live`
-is the deliberate, logged spend. llama-3.3 is best-effort JSON, so enrich validates
-and clamps the score in Python; a bad parse degrades to 0, never crashes.
+**Live-validation follow-up (same day).** The first live run proved a plain topic
+search (`q = topic`) returns *documents about the topic* (papers, docs, Reddit), not
+people — all 9 results correctly scored 0. Fix: split the clean stored `topic` from
+the SerpAPI `query`, and shape the query with person-intent signals
+(`"professor" OR "researcher" OR "author" OR "scientist"` + `site:github.com OR
+site:scholar.google.com OR site:.edu`) plus parsed exclusions as negative terms.
+Re-validated: 7 named RL researchers (Sergey Levine, Pieter Abbeel, ...) scored 90–98,
+institutional/non-person pages still scored 0. Lesson mirrors the Apollo paywall — the
+live response shape differed from the fixture's assumption, which is what a validation
+run exists to surface.
 
 ---
 

@@ -1,0 +1,30 @@
+{
+  "_comment": "Mock SerpAPI Google-search response, trimmed to the fields sources.py reads. Used in EXPERT_SOURCE_MODE=mock so dev spends zero SerpAPI searches. Shape mirrors SerpAPI's organic_results[] objects. Includes a duplicate link to exercise dedup.",
+  "organic_results": [
+    {
+      "title": "Dr. Elena Vasquez — Reinforcement Learning for Robotics",
+      "link": "https://stanford.edu/~evasquez",
+      "snippet": "Associate Professor at Stanford. 40+ papers on RL and robotic manipulation, keynote speaker at NeurIPS and ICRA."
+    },
+    {
+      "title": "Hiro Tanaka (@hirotanaka) · GitHub",
+      "link": "https://github.com/hirotanaka",
+      "snippet": "Creator of an open-source RL framework with 18k stars. Frequent conference talks on sample-efficient learning."
+    },
+    {
+      "title": "Marcus Bell - Medium",
+      "link": "https://medium.com/@marcusbell",
+      "snippet": "I write occasional beginner tutorials about getting started with machine learning."
+    },
+    {
+      "title": "10 Best AI Newsletters to Follow in 2026 - listicle",
+      "link": "https://contentfarm.example/best-ai-newsletters",
+      "snippet": "A roundup of newsletters. Sponsored content with affiliate links."
+    },
+    {
+      "title": "Dr. Elena Vasquez — Reinforcement Learning for Robotics",
+      "link": "https://stanford.edu/~evasquez",
+      "snippet": "Associate Professor at Stanford. 40+ papers on RL and robotic manipulation, keynote speaker at NeurIPS and ICRA."
+    }
+  ]
+}
