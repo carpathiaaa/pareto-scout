@@ -51,7 +51,9 @@ def _platform_from_url(url: str | None) -> str:
     """
     if not url:
         return "unknown"
-    host = (urlparse(url).hostname or "").lower().lstrip("www.")
+    # removeprefix, NOT lstrip: lstrip("www.") strips any leading char in the set
+    # {w, .}, so e.g. "web.dev" -> "eb.dev". removeprefix strips the literal prefix.
+    host = (urlparse(url).hostname or "").lower().removeprefix("www.")
     if "github.com" in host:
         return "github"
     if host.endswith(".edu") or ".edu." in host:

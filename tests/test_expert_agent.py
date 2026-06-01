@@ -45,6 +45,14 @@ def test_platform_detection() -> None:
     assert _platform_from_url(None) == "unknown"
 
 
+def test_platform_uses_removeprefix_not_lstrip() -> None:
+    # Regression: lstrip("www.") strips any leading {w, .} char, so "web.dev" became
+    # "eb.dev" in the fallback. removeprefix strips only the literal "www." prefix.
+    assert _platform_from_url("https://web.dev/article") == "web.dev"
+    assert _platform_from_url("https://www.github.com/x") == "github"
+    assert _platform_from_url("https://wired.com/story") == "wired.com"
+
+
 def test_score_expert_clamps_and_keeps_refined_name(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
