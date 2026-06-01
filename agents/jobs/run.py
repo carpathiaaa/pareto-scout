@@ -47,11 +47,16 @@ def run_jobs_agent(raw_query: str, *, limit: int = 20) -> dict[str, Any]:
     )
     search_run_id = run_row["id"]
 
-    # SerpAPI may yield tier-1 (email) candidates; Reddit is discovery-only and never
-    # tier 1. Both are flattened into one list and deduped by profile_url.
-    candidates = fetch_open_to_work(criteria, limit=limit) + fetch_reddit_forhire(
-        limit=limit
-    )
+    # SerpAPI is the primary, credit-spending source. Reddit is an optional,
+    # discovery-only layer, so its failure must NOT sink a run we already paid for:
+    # catch and continue with whatever SerpAPI returned. (Reddit blocks anonymous
+    # reads, so a 403 here is expected and non-fatal.)
+    candidates = fetch_open_to_work(criteria, limit=limit)
+    try:
+        candidates += fetch_reddit_forhire(limit=limit)
+    except Exception as e:  # noqa: BLE001 — discovery source must never sink the run
+        logger.warning("Reddit discovery skipped (non-fatal): %s", e)
+
     deduped = dedup_by(candidates, key=lambda c: c.get("profile_url"))
     logger.info("Fetched %d candidates, %d after dedup", len(candidates), len(deduped))
 

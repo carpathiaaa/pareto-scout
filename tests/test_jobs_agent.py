@@ -10,10 +10,23 @@ import pytest
 from agents.jobs import classifier, run as run_mod
 from agents.jobs.sources import (
     _extract_email,
+    _job_query,
     _platform_from_url,
     fetch_open_to_work,
     fetch_reddit_forhire,
 )
+
+
+def test_job_query_flattens_lists_and_excludes_job_boards() -> None:
+    # Parsed fields arrive as lists; the query must not leak brackets, must bias
+    # toward profile sites, and must exclude commercial job boards (the first live
+    # run returned Indeed/Upwork listings instead of people).
+    q = _job_query(
+        {"target_role_or_skills": ["product designers"], "seniority": ["mid"]}
+    )
+    assert "['product designers']" not in q and "product designers" in q
+    assert "site:contra.com" in q
+    assert "-site:indeed.com" in q and "-site:upwork.com" in q
 
 
 def test_email_extraction() -> None:
@@ -118,6 +131,38 @@ def test_classify_degrades_on_bad_json(monkeypatch: pytest.MonkeyPatch) -> None:
         {"contact_email": None, "reddit_discovery_only": False}, {}
     )
     assert out["reachability_tier"] == 4  # worst tier on a failed parse
+
+
+def test_run_continues_when_reddit_discovery_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Reddit is an optional discovery source; its failure must not sink a run whose
+    # paid SerpAPI source already succeeded.
+    monkeypatch.setenv("JOBS_SOURCE_MODE", "mock")
+    monkeypatch.setattr(run_mod, "parse_query_to_fields", lambda q, a: {})
+    monkeypatch.setattr(run_mod.db, "insert", lambda t, r: {"id": "run-r"})
+    monkeypatch.setattr(
+        run_mod,
+        "classify_seeker",
+        lambda c, crit: {
+            **c,
+            "skills": [],
+            "matched_role": "",
+            "reachability_tier": 3,
+            "contact_email": None,
+            "draft_message": "",
+        },
+    )
+    monkeypatch.setattr(run_mod.db, "upsert", lambda t, rows, on_conflict=None: rows)
+
+    def boom(*a, **k):
+        raise RuntimeError("reddit 403")
+
+    monkeypatch.setattr(run_mod, "fetch_reddit_forhire", boom)
+
+    summary = run_mod.run_jobs_agent("designers")
+    # SerpAPI fixture still yields its 4 deduped candidates; the run did not crash.
+    assert summary["deduped"] == 4
 
 
 def test_run_pipeline_tiers_and_status(monkeypatch: pytest.MonkeyPatch) -> None:

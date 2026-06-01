@@ -110,15 +110,40 @@ def fetch_open_to_work(
     return _fetch_open_to_work_live(criteria, limit=limit)
 
 
+# Bias the search toward individual job-seekers and away from job boards. The first
+# live run returned Indeed/Upwork/ZipRecruiter listing pages (employers hiring), not
+# people open to work, because "open to work" matches both. Profile sites surface
+# individuals; the negative site filters exclude the commercial aggregators.
+_SEEKER_SITES = (
+    "(site:contra.com OR site:read.cv OR site:behance.net OR site:wellfound.com)"
+)
+_JOB_BOARD_EXCLUDES = (
+    "-site:indeed.com -site:upwork.com -site:ziprecruiter.com "
+    "-site:glassdoor.com -site:linkedin.com/jobs"
+)
+
+
+def _flatten(value: Any) -> str:
+    """Render a criteria field (str | list | None) as a plain space-joined string.
+
+    Parsed fields come back as lists (e.g. ['product designers']); str() on a list
+    would leak brackets into the query. This flattens them to clean search terms.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return " ".join(str(v) for v in value if v)
+    return str(value)
+
+
 def _job_query(criteria: dict[str, Any]) -> str:
-    """Build the search string from parsed jobs criteria + an open-to-work intent."""
-    parts = [
-        criteria.get("target_role_or_skills"),
-        criteria.get("seniority"),
-        criteria.get("location"),
-    ]
-    base = " ".join(str(p) for p in parts if p).strip()
-    return f'{base} ("open to work" OR "for hire" OR "available for")'.strip()
+    """Build the people-biased search string from parsed jobs criteria."""
+    base = " ".join(
+        _flatten(criteria.get(k))
+        for k in ("target_role_or_skills", "seniority", "location")
+    ).strip()
+    intent = '("open to work" OR "available for hire")'
+    return f"{base} {intent} {_SEEKER_SITES} {_JOB_BOARD_EXCLUDES}".strip()
 
 
 def _fetch_open_to_work_live(

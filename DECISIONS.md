@@ -38,6 +38,23 @@ in a follow-up.
 **Implication.** Live jobs run spends 1 SerpAPI search; Reddit reads are free anonymous
 public JSON. No new migration — `job_seekers` already has `unique(profile_url)`.
 
+**Live-validation follow-ups (same day).** Three findings from validating live:
+1. *Reddit blocks anonymous reads (403).* And worse, that failure originally crashed
+   the whole run, discarding paid SerpAPI results. Fix: the Reddit (discovery, free)
+   source is now wrapped in try/except in run.py — its failure is logged and the run
+   continues on SerpAPI alone. The priority (paid primary vs free optional) is now
+   enforced in code, not just intent. Locked by a test.
+2. *Plain "open to work" search returned job boards (Indeed/Upwork/ZipRecruiter),
+   i.e. employers hiring, not individuals.* Same shape as the expert topic-vs-people
+   issue. Fix: bias the query to profile sites (contra/read.cv/behance/wellfound) and
+   negative-filter the aggregators. Re-validated: results became real Behance/Contra
+   individuals.
+3. *Tier 1 is genuinely rare on portfolio platforms.* People expose contact forms/DMs,
+   not raw emails, so most surfaced seekers are tier 2 (reachable, no public email →
+   stored, not auto-sendable). This is correct behavior, not a miss; chasing tier-1
+   would require a paid email-finder (declined). Also fixed a bug where list-valued
+   criteria leaked brackets into the query (`['product designers']`) via `_flatten`.
+
 ---
 
 ## 2026-05-31 — Expert agent: SerpAPI universal source, scored by url, non-experts filtered by LLM
