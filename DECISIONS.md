@@ -5,6 +5,29 @@ choice: the decision, the alternatives considered, and why this one won.
 
 ---
 
+## 2026-05-31 — Expert agent: SerpAPI universal source, scored by url, non-experts filtered by LLM
+
+**Decision.** The expert agent clones the lead skeleton with three changes: source is
+SerpAPI (one Google search), table is `agency.experts`, and the upsert conflict key is
+`url` (migration 002 adds `unique(url)`). `score_expert` returns score + draft +
+refined_name in one LLM call. Source/scorer are pure; only run.py writes.
+
+**Why url as the key.** Experts have no email; an expert is identified by their
+profile/article URL, and the same person under two platforms (a paper and a GitHub)
+is two distinct pieces of evidence worth separate rows. In-run dedup alone was
+rejected: it lets re-runs of the same search accumulate duplicate rows. A unique(url)
+index makes upsert idempotent across runs, consistent with leads.email.
+
+**Why not filter non-experts at the source.** SerpAPI returns listicles and ads, not
+just people. We let the LLM score handle it (a roundup scores near 0 and drops below
+threshold) rather than writing brittle URL/title heuristics. The score already exists;
+reusing it for "is this even a person" costs nothing extra.
+
+**Implication.** Run migration 002 once in Supabase before using the agent. Each live
+run spends 1 of ~100 monthly SerpAPI searches + 1 Groq call per result.
+
+---
+
 ## 2026-05-31 — Custom `agency` schema needs explicit GRANTs to service_role
 
 **Decision.** Migration 001 grants `usage` + `all` on the `agency` schema, its
