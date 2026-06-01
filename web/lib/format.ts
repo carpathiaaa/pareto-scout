@@ -31,5 +31,5 @@ export function tierLabel(tier: number | null): string {
 }
 
 export function statusClass(status: Status): string {
-  return status === "new" ? "status-new" : status === "archived" ? "status-archived" : "";
+  return `status-${status}`;
 }

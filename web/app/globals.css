@@ -312,6 +312,55 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .status-new { color: var(--teal); border-color: rgba(67,196,176,0.4); }
 .status-archived { color: var(--paper-faint); }
 
+/* ── Review actions ───────────────────────────────────────────────────────── */
+.review-bar {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: flex-end;
+}
+.actions { display: flex; gap: 8px; }
+.act {
+  appearance: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 7px 16px;
+  border-radius: 2px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--paper-dim);
+  transition: all .15s;
+}
+.act:hover:not(:disabled) { transform: translateY(-1px); }
+.act:disabled { opacity: 0.4; cursor: progress; }
+.act-skip:hover:not(:disabled) {
+  border-color: var(--rose);
+  color: var(--rose);
+}
+.act-approve {
+  border-color: var(--signal-deep);
+  color: var(--signal);
+}
+.act-approve:hover:not(:disabled) {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--ink-900);
+  font-weight: 600;
+}
+.act-reopen {
+  border-style: dashed;
+  color: var(--paper-faint);
+}
+.act-reopen:hover:not(:disabled) { color: var(--paper); border-color: var(--ink-600); }
+
+/* Reviewed cards dim slightly so the unreviewed queue stands out. */
+.status-approved { color: var(--signal); border-color: rgba(245,165,36,0.4); }
+.status-skipped { color: var(--rose); border-color: rgba(224,106,106,0.35); }
+
 /* ── Empty / loading ──────────────────────────────────────────────────────── */
 .empty-state {
   border: 1px dashed var(--line);
