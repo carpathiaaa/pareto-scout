@@ -5,6 +5,30 @@ choice: the decision, the alternatives considered, and why this one won.
 
 ---
 
+## 2026-05-31 — Web UI: hand-scaffolded Next.js, anon+RLS reads, pinned to patched Next
+
+**Decision.** The review desk is a hand-written `web/` (App Router, TS) rather than
+`create-next-app`: lean deps (next, react, @supabase/supabase-js), a Supabase anon
+client pinned to the `agency` schema, and a client `<Queue>` with realtime. First
+slice is read-only (no approve/send). Migration 003 enables RLS SELECT-only policies
+for anon + adds the dataset tables to the realtime publication.
+
+**Alternatives.** create-next-app — rejected: pulls a large opinionated tree
+(ESLint/Tailwind/turbopack config) we don't need for a POC and obscures what's
+actually required. Server-route reads with service_role — rejected for this slice:
+CLAUDE.md says the UI reads Supabase directly + realtime, which needs the anon key and
+RLS policies (realtime filters pushes through them).
+
+**Security note (accepted, documented).** The anon key ships to the browser; RLS
+scopes it to SELECT on leads/experts/job_seekers only, outreach_log stays closed.
+Acceptable for a POC on non-production data; tighten to authenticated-only on
+graduation. Next was bumped 15.1.6 → 15.5.18 to clear a critical CVE (CVE-2025-66478).
+Remaining `npm audit` advisories (PostCSS XSS-in-CSS-stringify, transitive) are build-
+time only and not reachable at runtime; the suggested "fix" downgrades Next to 9.x
+(six majors back), so we accept them rather than break the app.
+
+---
+
 ## 2026-05-31 — Jobs agent: tier (not score) gates the queue; tier 1 is a fact; Reddit is discovery-only
 
 **Decision.** The jobs agent classifies each seeker into a reachability tier 1–4. Tier
