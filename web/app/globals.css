@@ -312,6 +312,49 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .status-new { color: var(--teal); border-color: rgba(67,196,176,0.4); }
 .status-archived { color: var(--paper-faint); }
 
+/* ── Send bar ─────────────────────────────────────────────────────────────── */
+.send-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 0 26px;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--teal);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, var(--ink-800), var(--ink-850));
+  flex-wrap: wrap;
+}
+.send-btn {
+  appearance: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 9px 18px;
+  border-radius: 2px;
+  border: 1px solid var(--teal);
+  background: transparent;
+  color: var(--teal);
+  transition: all .15s;
+}
+.send-btn:hover:not(:disabled) {
+  background: var(--teal);
+  color: var(--ink-900);
+  font-weight: 600;
+}
+.send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.send-msg { font-family: var(--font-mono); font-size: 12px; color: var(--paper); }
+.send-note {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--paper-faint);
+}
+
 /* ── Review actions ───────────────────────────────────────────────────────── */
 .review-bar {
   margin-top: 14px;
