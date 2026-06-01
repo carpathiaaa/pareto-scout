@@ -5,6 +5,41 @@ choice: the decision, the alternatives considered, and why this one won.
 
 ---
 
+## 2026-05-31 — Jobs agent: tier (not score) gates the queue; tier 1 is a fact; Reddit is discovery-only
+
+**Decision.** The jobs agent classifies each seeker into a reachability tier 1–4. Tier
+1 (a real public email exists) is the only actionable tier: those rows get status
+`new` and reach the review queue; tiers 2–4 get status `archived` (stored, not
+queued). Tier 1 is computed in Python from an email the source actually exposed
+(`_extract_email`, regex over result text — never guessed or constructed) AND the
+candidate not being a Reddit-discovery row. The LLM only assigns tiers 2–4.
+
+**Why tier-not-score.** The jobs goal is reachability, not fit, so a 0–100 score is the
+wrong gate. And the actionable decision ("can I email this person?") must be grounded
+in a real email, not an LLM judgment — otherwise the system could "decide" someone is
+reachable and there's no address. So email-existence is code, tier 2/3/4 nuance is the
+LLM.
+
+**Reddit guardrail (CLAUDE.md).** r/forhire is discovery-only: usernames, never emails,
+never outreach. Enforced structurally — Reddit candidates carry
+`reddit_discovery_only=True` and `contact_email=None`, and the classifier bars them
+from tier 1 (and nulls any email) regardless of LLM output. Locked by a test.
+
+**Tier-1 email source.** For the POC, an email counts only if present in the source
+result text. Rejected: enriching name+domain via Hunter's email-finder — more tier-1
+hits but spends credits and couples jobs to the lead source. Honest + zero extra spend
+won.
+
+**Bug found + fixed here:** `str.lstrip("www.")` strips a char SET, not a prefix, so it
+mangled `wellfound.com` → `ellfound.com`. Switched to `removeprefix("www.")`. The same
+bug exists in `expert/sources.py` (cosmetic platform label) and should be fixed there
+in a follow-up.
+
+**Implication.** Live jobs run spends 1 SerpAPI search; Reddit reads are free anonymous
+public JSON. No new migration — `job_seekers` already has `unique(profile_url)`.
+
+---
+
 ## 2026-05-31 — Expert agent: SerpAPI universal source, scored by url, non-experts filtered by LLM
 
 **Decision.** The expert agent clones the lead skeleton with three changes: source is
