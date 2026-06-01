@@ -1,0 +1,35 @@
+{
+  "_comment": "Mock Apollo /mixed_people response, trimmed to the fields sources.py reads. Used in LEAD_SOURCE_MODE=mock so dev spends zero Apollo credits. Shape mirrors Apollo's people[] objects.",
+  "people": [
+    {
+      "name": "Maya Lindqvist",
+      "title": "VP of Engineering",
+      "email": "maya.lindqvist@northwind-labs.com",
+      "organization": {"name": "Northwind Labs"}
+    },
+    {
+      "name": "Darnell Okafor",
+      "title": "Head of Data Platform",
+      "email": "darnell@brightshift.io",
+      "organization": {"name": "BrightShift"}
+    },
+    {
+      "name": "Priya Nair",
+      "title": "Chief Technology Officer",
+      "email": "priya.nair@cobaltgrid.dev",
+      "organization": {"name": "CobaltGrid"}
+    },
+    {
+      "name": "Tomas Berg",
+      "title": "Engineering Manager",
+      "email": null,
+      "organization": {"name": "Northwind Labs"}
+    },
+    {
+      "name": "Maya Lindqvist",
+      "title": "VP of Engineering",
+      "email": "maya.lindqvist@northwind-labs.com",
+      "organization": {"name": "Northwind Labs"}
+    }
+  ]
+}
