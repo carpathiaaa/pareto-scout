@@ -1,0 +1,21 @@
+{
+  "_comment": "Mock Reddit r/forhire listing (public JSON shape). DISCOVERY ONLY — Reddit yields usernames, never emails, and never feeds outreach (CLAUDE.md). These candidates are structurally capped below tier 1. Shape mirrors Reddit's data.children[].data.",
+  "data": {
+    "children": [
+      {
+        "data": {
+          "title": "[FOR HIRE] Full-stack developer, React + Node, $40/hr",
+          "author": "dev_throwaway_42",
+          "permalink": "/r/forhire/comments/abc123/for_hire_fullstack_developer/"
+        }
+      },
+      {
+        "data": {
+          "title": "[For Hire] Illustrator and concept artist available",
+          "author": "pixelwitch",
+          "permalink": "/r/forhire/comments/def456/for_hire_illustrator/"
+        }
+      }
+    ]
+  }
+}

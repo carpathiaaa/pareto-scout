@@ -1,0 +1,30 @@
+{
+  "_comment": "Mock SerpAPI 'open to work' search response. Used in JOBS_SOURCE_MODE=mock so dev spends zero SerpAPI searches. Shape mirrors organic_results[]. Snippets deliberately vary: one exposes a public email (tier 1), one has a portfolio but no email (tier 2/3), one is name-only (tier 4), plus a duplicate link.",
+  "organic_results": [
+    {
+      "title": "Ava Reyes — Product Designer, Open to Work",
+      "link": "https://avareyes.design",
+      "snippet": "Senior product designer (Figma, design systems). Currently open to new roles. Reach me at ava@avareyes.design."
+    },
+    {
+      "title": "Liang Wu | Frontend Engineer Portfolio",
+      "link": "https://liangwu.dev",
+      "snippet": "React / TypeScript engineer open to opportunities. Contact via the form on my site."
+    },
+    {
+      "title": "Priya Sharma - Data Scientist (#OpenToWork)",
+      "link": "https://contra.com/priya_sharma",
+      "snippet": "Data scientist specializing in NLP and forecasting. Available for freelance and full-time."
+    },
+    {
+      "title": "Marcus — looking for backend roles",
+      "link": "https://wellfound.com/u/marcus-b",
+      "snippet": "Backend dev. Open to work."
+    },
+    {
+      "title": "Ava Reyes — Product Designer, Open to Work",
+      "link": "https://avareyes.design",
+      "snippet": "Senior product designer (Figma, design systems). Currently open to new roles. Reach me at ava@avareyes.design."
+    }
+  ]
+}
