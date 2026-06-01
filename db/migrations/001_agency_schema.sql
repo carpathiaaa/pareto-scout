@@ -11,6 +11,29 @@
 
 create schema if not exists agency;
 
+-- Grant the agents' role access to the schema.
+--
+-- Exposing a schema in the API settings only lets PostgREST *see* it; the API roles
+-- still hold no privileges on a hand-created schema (unlike `public`, which Supabase
+-- pre-grants). Without these GRANTs every call fails with "permission denied for
+-- schema agency" (Postgres error 42501) even for service_role, because base-table
+-- privileges are checked before RLS ever runs.
+--
+-- We grant to service_role ONLY. The agents use the service-role key; the browser
+-- anon key must stay locked out of `agency` until migration 002 adds RLS + policies.
+-- DEFAULT PRIVILEGES covers tables created by future migrations so we never re-grant.
+grant usage on schema agency to service_role;
+grant all on all tables in schema agency to service_role;
+grant all on all sequences in schema agency to service_role;
+grant all on all routines in schema agency to service_role;
+
+alter default privileges in schema agency
+  grant all on tables to service_role;
+alter default privileges in schema agency
+  grant all on sequences to service_role;
+alter default privileges in schema agency
+  grant all on routines to service_role;
+
 -- Shared trigger: keep updated_at honest on every UPDATE.
 -- Defined once, attached to each table that has updated_at.
 create or replace function agency.set_updated_at()
