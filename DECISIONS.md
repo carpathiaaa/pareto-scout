@@ -5,6 +5,32 @@ choice: the decision, the alternatives considered, and why this one won.
 
 ---
 
+## 2026-05-31 — Lead agent: mock/live by env flag, one LLM call per lead, writes only in run.py
+
+**Decision.** `LEAD_SOURCE_MODE` (default `mock`) chooses fixtures vs real Apollo at
+each source call site. `enrich_lead` returns `fit_score` + `draft_message` from a
+single Groq call. Only `run.py` touches the database; `sources.py` and `enricher.py`
+are pure.
+
+**Alternatives.**
+- Mock via injected mock/real classes (DI) — rejected: more machinery than a POC
+  needs, and identical call sites under one env flag can't drift the way two class
+  implementations can.
+- Two LLM calls (score, then draft) — rejected: doubles the 30 req/min Groq budget
+  and lets score and message disagree. One JSON response keeps them consistent.
+- Let sources/enricher write directly — rejected: pushing all writes into run.py
+  keeps the expensive deps (network, DB) at the edges and the logic offline-testable.
+
+**Why this won.** Mock-first is both credit-safe (CLAUDE.md: spend only to validate)
+and a correctness tool: deterministic fixtures test dedup/threshold/projection so the
+only thing real credits buy is "does the live response match the fixture's shape."
+
+**Implication.** Dev and `pytest` spend zero Apollo credits. `LEAD_SOURCE_MODE=live`
+is the deliberate, logged spend. llama-3.3 is best-effort JSON, so enrich validates
+and clamps the score in Python; a bad parse degrades to 0, never crashes.
+
+---
+
 ## 2026-05-31 — Custom `agency` schema needs explicit GRANTs to service_role
 
 **Decision.** Migration 001 grants `usage` + `all` on the `agency` schema, its
