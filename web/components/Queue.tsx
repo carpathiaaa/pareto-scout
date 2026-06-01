@@ -111,6 +111,38 @@ export default function Queue() {
     jobs: rows.jobs.length,
   };
 
+  // Approved rows in the ACTIVE channel — the scope of one "send approved" click.
+  const approvedCount = (rows[active] as { status: Status }[]).filter(
+    (r) => r.status === "approved",
+  ).length;
+
+  // Send state: a banner of the last send's outcome, and an in-flight flag.
+  const [sending, setSending] = useState(false);
+  const [sendMsg, setSendMsg] = useState<string | null>(null);
+
+  const onSend = useCallback(async () => {
+    setSending(true);
+    setSendMsg(null);
+    try {
+      const res = await fetch("/api/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataset: active }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSendMsg(`Send failed: ${data.error ?? res.statusText}`);
+      } else {
+        setSendMsg(`Sent ${data.sent}, failed ${data.failed} (to test inbox).`);
+        await load(active, true); // refresh statuses (now sent/failed)
+      }
+    } catch (e) {
+      setSendMsg(e instanceof Error ? e.message : "send request failed");
+    } finally {
+      setSending(false);
+    }
+  }, [active, load]);
+
   return (
     <>
       <nav className="channels">
@@ -126,6 +158,22 @@ export default function Queue() {
           </button>
         ))}
       </nav>
+
+      <div className="send-bar">
+        <button
+          className="send-btn"
+          disabled={sending || approvedCount === 0}
+          onClick={onSend}
+        >
+          {sending
+            ? "sending…"
+            : approvedCount === 0
+              ? "no approved to send"
+              : `send ${approvedCount} approved →`}
+        </button>
+        {sendMsg ? <span className="send-msg">{sendMsg}</span> : null}
+        <span className="send-note">sends to test inbox only</span>
+      </div>
 
       {loading ? (
         <div className="grid">
