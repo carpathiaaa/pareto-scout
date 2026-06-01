@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "groq-api": {
+      "source": "diskd-ai/groq-api",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "27055c11307595b3d2f4a6a251a2bea13be4061de7a30a9cc42a55eb96de6bdd"
+    },
+    "nextjs-app-router-fundamentals": {
+      "source": "wsimmonds/claude-nextjs-skills",
+      "sourceType": "github",
+      "skillPath": "nextjs-app-router-fundamentals/SKILL.md",
+      "computedHash": "7db69d3b4cdc7e880b667b7173146f3ff8b8fb096aace7f2e7f47ec4bac3ee79"
+    },
+    "python-best-practices": {
+      "source": "rohitg00/awesome-claude-code-toolkit",
+      "sourceType": "github",
+      "skillPath": "skills/python-best-practices/SKILL.md",
+      "computedHash": "778eef3d79e4ab2f2ddbf1a1386288952d552df44a6e78cc8761e8484a848e97"
+    }
+  }
+}
