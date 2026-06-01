@@ -107,10 +107,35 @@ def fetch_from_serpapi(
     return _fetch_from_serpapi_live(criteria, topic, limit=limit)
 
 
+# Person-intent signals appended to the live search. A bare topic search returns
+# documents about the topic (papers, docs, tutorials); these terms and site-scopes
+# bias Google toward named people and their profiles. The first live run proved a
+# plain topic query surfaces almost no actual experts — only content about the topic.
+_PERSON_INTENT = '("professor" OR "researcher" OR "author" OR "scientist")'
+_PEOPLE_SITES = "(site:github.com OR site:scholar.google.com OR site:.edu)"
+
+
 def _query_topic(criteria: dict[str, Any]) -> str:
-    """Build the search-string / stored topic from the parsed criteria."""
+    """Build the clean topic string stored on each row (no search operators).
+
+    Kept separate from the search query so the `topic` column stays human-readable
+    ("robotics reinforcement learning") rather than carrying Google operators.
+    """
     parts = [criteria.get("field_or_domain"), criteria.get("topic_or_specialty")]
     return " ".join(str(p) for p in parts if p).strip()
+
+
+def _search_query(topic: str, criteria: dict[str, Any]) -> str:
+    """Build the SerpAPI query: the topic plus person-intent signals.
+
+    Distinct from _query_topic because what we search for (people who work on the
+    topic) is not what we store (the topic itself). Any parsed exclusions are appended
+    as negative terms so the search itself does some of the filtering.
+    """
+    query = f"{topic} {_PERSON_INTENT} {_PEOPLE_SITES}".strip()
+    for term in _as_list(criteria.get("exclusions")):
+        query += f" -{term}"
+    return query
 
 
 def _fetch_from_serpapi_live(
@@ -127,10 +152,12 @@ def _fetch_from_serpapi_live(
     logger.warning("SerpAPI: LIVE mode — this spends 1 search (free tier ~100/month)")
     _serpapi_limiter.wait()
 
+    query = _search_query(topic, criteria)
+    logger.info("SerpAPI query: %s", query)
     try:
         response = httpx.get(
             "https://serpapi.com/search",
-            params={"engine": "google", "q": topic, "num": limit, "api_key": api_key},
+            params={"engine": "google", "q": query, "num": limit, "api_key": api_key},
             timeout=30.0,
         )
         response.raise_for_status()
@@ -139,4 +166,14 @@ def _fetch_from_serpapi_live(
         raise
 
     results = response.json().get("organic_results", [])
+    # Store the clean topic, not the operator-laden query, on each candidate.
     return [_normalize_serp_result(r, topic) for r in results]
+
+
+def _as_list(value: Any) -> list[str]:
+    """Coerce a criteria field to a list of strings (mirrors the lead agent helper)."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(v) for v in value if v]
+    return [str(value)]

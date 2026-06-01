@@ -26,6 +26,17 @@ reusing it for "is this even a person" costs nothing extra.
 **Implication.** Run migration 002 once in Supabase before using the agent. Each live
 run spends 1 of ~100 monthly SerpAPI searches + 1 Groq call per result.
 
+**Live-validation follow-up (same day).** The first live run proved a plain topic
+search (`q = topic`) returns *documents about the topic* (papers, docs, Reddit), not
+people — all 9 results correctly scored 0. Fix: split the clean stored `topic` from
+the SerpAPI `query`, and shape the query with person-intent signals
+(`"professor" OR "researcher" OR "author" OR "scientist"` + `site:github.com OR
+site:scholar.google.com OR site:.edu`) plus parsed exclusions as negative terms.
+Re-validated: 7 named RL researchers (Sergey Levine, Pieter Abbeel, ...) scored 90–98,
+institutional/non-person pages still scored 0. Lesson mirrors the Apollo paywall — the
+live response shape differed from the fixture's assumption, which is what a validation
+run exists to surface.
+
 ---
 
 ## 2026-05-31 — Custom `agency` schema needs explicit GRANTs to service_role

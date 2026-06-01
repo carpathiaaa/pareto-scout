@@ -8,7 +8,11 @@ from typing import Any
 import pytest
 
 from agents.expert import run as run_mod, scorer
-from agents.expert.sources import _platform_from_url, fetch_from_serpapi
+from agents.expert.sources import (
+    _platform_from_url,
+    _search_query,
+    fetch_from_serpapi,
+)
 
 
 def test_serpapi_mock_returns_normalized_candidates(
@@ -21,6 +25,17 @@ def test_serpapi_mock_returns_normalized_candidates(
     )
     # topic is stitched from the criteria, not the result.
     assert all(r["topic"] == "ML RL" for r in rows)
+
+
+def test_search_query_adds_person_intent_and_exclusions() -> None:
+    # The live query must bias toward people (not topic docs) and honor exclusions,
+    # while the stored topic stays clean — that separation is the fix for the first
+    # live run where topic-only search returned only documents.
+    q = _search_query("robotics RL", {"exclusions": ["beginner", "course"]})
+    assert "robotics RL" in q
+    assert "professor" in q and "researcher" in q
+    assert "site:github.com" in q
+    assert "-beginner" in q and "-course" in q
 
 
 def test_platform_detection() -> None:
